@@ -11,5 +11,5 @@
   * `order_direction=<desc|asc>` - `desc` for newest series, `asc` for all episodes.
   * `movie_id=<number>` - id for movies of Mult channel, in this case it's "Fantasy patrol".
 * `https:\/\/mult.digitala.ru\/api\/v1\/materials?type=episode&movie_id=7&query=<query>`
-  * `query` - query for series search 
+  * `query` - query for series search.
 * Other links are located on [URLS.java](https://pastebin.com/67SerUMV) file from decompilated app
