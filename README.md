@@ -6,5 +6,8 @@
 * After download video files will be located in folder where located ffmpeg.
 ## Links for download
 * Mult bank (needed for download videos from playlist): https://b1.mult.digitala.ru/c/
-* Mult server for send requests: https://mult.digitala.ru/api/v1/materials?type=7&order_by=episode_number&order_direction=desc&movie_id=7
+* `https://mult.digitala.ru/api/v1/materials?type=episode&order_by=&order_direction=&movie_id=7`
+  * `order_by=<episode_number|published_at>` 
+  * `order_direction=<desc|asc>` - desc for newest series, asc for all episodes.
+  * `movie_id=<number>` - id for movies of Mult channel, in this case it's "Fantasy patrol".
 * Other links are located on [URLS.java](https://pastebin.com/67SerUMV) file from decompilated app
