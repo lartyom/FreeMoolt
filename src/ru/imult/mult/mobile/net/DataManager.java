@@ -8,6 +8,10 @@ import java.io.InputStreamReader;
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 
+import ru.imult.mult.mobile.m3u8.ParseException;
+import ru.imult.mult.mobile.m3u8.Playlist;
+import ru.imult.mult.mobile.m3u8.PlaylistParser;
+
 public class DataManager {
 	 private static DataManager instance;
 	private static final String HEADER_AUTHORIZATION = "Authorization";
@@ -36,10 +40,25 @@ public class DataManager {
 		    jsonobject = (new JsonParser()).parse(response).getAsJsonObject();
 		    return jsonobject;
 	    }
+	 public Playlist getM3U8FromUrlSync(final String url) throws IOException, ParseException
+	    {
+	        URL r_url = new URL(url);
+	        HttpURLConnection connection = (HttpURLConnection) r_url.openConnection();
+	        // add auth header to request
+	        connection.connect();
+	        InputStream in;
+	        int status = connection.getResponseCode();
+	        if (status != HttpURLConnection.HTTP_OK) {
+	            in = connection.getErrorStream();
+	        } else {
+	            in = connection.getInputStream();
+	        }
+		    return new PlaylistParser(ru.imult.mult.mobile.m3u8.PlaylistType.M3U8).parse(new InputStreamReader(in, "utf-8"));
+	    }
 
 	private String convertStreamToString(InputStream stream) throws IOException {
 		// TODO Auto-generated method stub
-		BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+		BufferedReader reader = new BufferedReader(new InputStreamReader(stream, "utf-8"));
         StringBuilder sb = new StringBuilder();
 
         String line;
