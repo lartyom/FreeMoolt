@@ -7,6 +7,8 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.concurrent.CountDownLatch;
 import java.util.Iterator;
+import ru.imult.mult.mobile.net.*;
+import ru.imult.mult.pirate.Main;
 public class M3u8Parser {
 	public static interface OnParsedListener
     {
@@ -83,5 +85,24 @@ public class M3u8Parser {
 			}
 	     
 	    }
+	 public static void createPlaylistOfPlaylist(Playlist playlist, String ffmpegpath/*, OnParsedListener onparsedlistener*/) throws MalformedURLException, IOException, ParseException, InterruptedException
+	    {
+		 QualityPlaylist qualityplaylist = new QualityPlaylist();
+	     qualityplaylist.setMaster(playlist);
+		 //CountDownLatch countdownlatch = new CountDownLatch(playlist.getElements().size());
+	     Element element;
+	     String s;
+	     try(PrintStream printStream = new PrintStream(ffmpegpath+"\\stream.txt"))
+	        {
+	    for(int i =0;i<playlist.getElements().size();i++){    	
+	    
+	    	 s = (new StringBuilder()).append("https://b1.mult.digitala.ru/c/").append(((Element)playlist.getElements().get(i)).getURI().toString()).toString();
+	    	 System.out.println("Downloading "+s+" file...");
+	    	 //((Element)playlist.getElements().get(i)).getPlayListInfo().getCodecs()
+	    	Main.downloadVideo(s,ffmpegpath,"all_"+i+".mp4");
+	     
 	    }
+	        }
+	    }
+}
 

@@ -113,4 +113,9 @@ class ElementBuilder
         uri = uri1;
         return this;
     }
+
+	public void mediaSequence(int mediaSequenceNumber) {
+		// TODO Auto-generated method stub
+		
+	}
 }

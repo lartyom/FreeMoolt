@@ -1,305 +1,258 @@
-// Decompiled by Jad v1.5.8g. Copyright 2001 Pavel Kouznetsov.
-// Jad home page: http://www.kpdus.com/jad.html
-// Decompiler options: packimports(3) fieldsfirst noctor space 
-
 package ru.imult.mult.mobile.m3u8;
 
 import java.io.File;
 import java.net.URI;
-import java.util.*;
+import java.nio.channels.Channels;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-// Referenced classes of package ru.imult.mult.mobile.m3u8:
-//            ParseException, PlaylistType, ElementBuilder, Playlist, 
-//            EncryptionInfo
+import static ru.imult.mult.mobile.m3u8.M3uConstants.*;//net.chilicat.m3u8.M3uConstants.*;
 
-public class PlaylistParser
-{
+/**
+ * Implementation based on http://tools.ietf.org/html/draft-pantos-http-live-streaming-02#section-3.1.
+ *
+ * @author dkuffner
+ */
+public final class PlaylistParser {
+    private Logger log = Logger.getLogger(getClass().getName());
 
-    private Logger log;
+    static PlaylistParser create(PlaylistType type) {
+        return new PlaylistParser(type);
+    }
+
     private PlaylistType type;
 
-    public PlaylistParser(PlaylistType playlisttype)
-    {
-        log = Logger.getLogger(getClass().getName());
-        if (playlisttype == null)
-        {
-            throw new NullPointerException("type");
-        } else
-        {
-            type = playlisttype;
-            return;
+    public PlaylistParser(PlaylistType type) {
+        if (type == null) {
+            throw new NullPointerException("type"); //NonNls
         }
+        this.type = type;
     }
 
-    private void checkFirstLine(int i, String s)
-        throws ParseException
-    {
-        if (type == PlaylistType.M3U8 && !s.startsWith("#EXTM3U"))
-            throw new ParseException(s, i, (new StringBuilder()).append("Playlist type '").append(PlaylistType.M3U8).append("' must downloadNext with ").append("#EXTM3U").toString());
-        else
-            return;
+
+    /**
+     * See {@link Channels#newReader(java.nio.channels.ReadableByteChannel, String)}
+     * See {@link java.io.StringReader}
+     *
+     * @param source the source.
+     * @return a playlist.
+     * @throws ParseException parsing fails.
+     */
+    public Playlist parse(Readable source) throws ParseException {
+
+        final Scanner scanner = new Scanner(source);
+
+        boolean firstLine = true;
+
+        int lineNumber = 0;
+
+        final List<Element> elements = new ArrayList<Element>(10);
+        final ElementBuilder builder = new ElementBuilder();
+        boolean endListSet = false;
+        int targetDuration = -1;
+        int mediaSequenceNumber = 1;
+
+        EncryptionInfo currentEncryption = null;
+
+        while (scanner.hasNextLine()) {
+            String line = scanner.nextLine().trim();
+
+            if (line.length() > 0) {
+                if (line.startsWith(EX_PREFIX)) {
+                    if (firstLine) {
+                        checkFirstLine(lineNumber, line);
+                        firstLine = false;
+                    } else if (line.startsWith(EXTINF)) {
+                        parseExtInf(line, lineNumber, builder);
+                    } else if (line.startsWith(EXT_X_ENDLIST)) {
+                        endListSet = true;
+                    } else if (line.startsWith(EXT_X_TARGET_DURATION)) {
+                        if (targetDuration != -1) {
+                            throw new ParseException(line, lineNumber, EXT_X_TARGET_DURATION + " duplicated");
+                        }
+                        targetDuration = parseTargetDuration(line, lineNumber);
+                    } else if (line.startsWith(EXT_X_MEDIA_SEQUENCE)) {
+                        mediaSequenceNumber = parseMediaSequence(line, lineNumber);
+                    } else if (line.startsWith(EXT_X_PROGRAM_DATE_TIME)) {
+                        long programDateTime = parseProgramDateTime(line, lineNumber);
+                        builder.programDate(programDateTime);
+                    } else if (line.startsWith(EXT_X_STREAM_INF)) {
+                        if (!parsePlayListInfo(builder, line)) {
+                            throw new ParseException(line, lineNumber, "Failed to parse EXT-X-STREAM-INF element");
+                        }
+                    } else if (line.startsWith(EXT_X_KEY)) {
+                        currentEncryption = parseEncryption(line, lineNumber);
+                    } else {
+                        log.log(Level.FINE, "Unknown: '" + line + "'");
+                    }
+                } else if (line.startsWith(COMMENT_PREFIX)) {
+                    // no first line check because comments will be ignored.
+                    // comment do nothing
+                    if (log.isLoggable(Level.FINEST)) {
+                        log.log(Level.FINEST, "----- Comment: " + line);
+                    }
+                } else {
+                    if (firstLine) {
+                        checkFirstLine(lineNumber, line);
+                    }
+
+                    // No prefix: must be the media uri.
+                    builder.mediaSequence(mediaSequenceNumber);
+                    builder.encrypted(currentEncryption);
+
+                    builder.uri(toURI(line));
+                    elements.add(builder.create());
+                    mediaSequenceNumber++;
+
+                    // a new element begins.
+                    builder.reset();
+                }
+            }
+
+            lineNumber++;
+        }
+
+        return new Playlist(Collections.unmodifiableList(elements), endListSet, targetDuration, mediaSequenceNumber);
     }
 
-    static PlaylistParser create(PlaylistType playlisttype)
-    {
-        return new PlaylistParser(playlisttype);
-    }
+    private boolean parsePlayListInfo(ElementBuilder builder, String line) {
+        int programId = -1;
+        int bandWidth = -1;
+        String codec = "";
+	String resolution = null;
+        String attributesList = line.substring(line.indexOf(":"));
 
-    private EncryptionInfo parseEncryption(String s, int i)
-        throws ParseException
-    {
-        Matcher matcher = M3uConstants.Patterns.EXT_X_KEY.matcher(s);
-        if (matcher.find() && matcher.matches() && matcher.groupCount() >= 1)
-        {
-            String s1 = matcher.group(1);
-            String s2 = matcher.group(3);
-            if (s1.equalsIgnoreCase("none"))
-                return null;
-            URI uri = null;
-            if (s2 != null)
-                uri = toURI(s2);
-            return new ElementImpl.EncryptionInfoImpl(uri, s1);
-        } else
-        {
-            throw new ParseException(s, i, (new StringBuilder()).append("illegal input: ").append(s).toString());
-        }
-    }
+        // Iterate through the attributes string, chopping it down until we have all the values
+        try {
+            while (attributesList.length() > 0) {
+                // Skip the initial : or the last delimiting comma
+                attributesList = attributesList.substring(1);
+                String name = attributesList.substring(0, attributesList.indexOf('='));
+                int indexOfEquals = attributesList.indexOf('=');
+                attributesList = attributesList.substring(indexOfEquals + 1);
+                String value;
 
-    private void parseExtInf(String s, int i, ElementBuilder elementbuilder)
-        throws ParseException
-    {
-        Matcher matcher = M3uConstants.Patterns.EXTINF.matcher(s);
-        if (!matcher.find() && !matcher.matches() && matcher.groupCount() < 1)
-            throw new ParseException(s, i, "EXTINF must specify at least the duration");
-        String s1 = matcher.group(1);
-        String s2;
-        if (matcher.groupCount() > 1)
-            s2 = matcher.group(2);
-        else
-            s2 = "";
-        try
-        {
-            elementbuilder.duration(Integer.valueOf(s1).intValue()).title(s2);
-            return;
-        }
-        catch (NumberFormatException numberformatexception)
-        {
-            throw new ParseException(s, i, numberformatexception);
-        }
-    }
+                if (attributesList.charAt(0) == '"') {
+                    // String component.
+                    // Skip the initial "
+                    attributesList = attributesList.substring(1);
+                    int indexOfQuote = attributesList.indexOf('"');
+                    value = attributesList.substring(0, indexOfQuote);
+                    attributesList = attributesList.substring(indexOfQuote + 1);
+                } else {
+                    int indexOfComma = attributesList.indexOf(',');
+                    indexOfComma = indexOfComma != -1 ? indexOfComma : attributesList.length();
+                    value = attributesList.substring(0, indexOfComma);
+                    attributesList = attributesList.substring(indexOfComma);
+                }
 
-    private int parseMediaSequence(String s, int i)
-        throws ParseException
-    {
-        return (int)parseNumberTag(s, i, M3uConstants.Patterns.EXT_X_MEDIA_SEQUENCE, "#EXT-X-MEDIA-SEQUENCE");
-    }
+                // Check to see whether our kvp is important to us
 
-    private long parseNumberTag(String s, int i, Pattern pattern, String s1)
-        throws ParseException
-    {
-        Matcher matcher = pattern.matcher(s);
-        if (!matcher.find() && !matcher.matches() && matcher.groupCount() < 1)
-            throw new ParseException(s, i, (new StringBuilder()).append(s1).append(" must specify duration").toString());
-        long l;
-        try
-        {
-            l = Long.valueOf(matcher.group(1)).longValue();
-        }
-        catch (NumberFormatException numberformatexception)
-        {
-            throw new ParseException(s, i, numberformatexception);
-        }
-        return l;
-    }
-
-    private boolean parsePlayListInfo(ElementBuilder elementbuilder, String s)
-    {
-        int i;
-        int j;
-        String s1;
-        String s2;
-        String s3;
-        i = -1;
-        j = -1;
-        s1 = "";
-        s2 = "";
-        s3 = s.substring(s.indexOf(":"));
-_L6:
-        String s5;
-        String s6;
-        if (s3.length() <= 0)
-            break; /* Loop/switch isn't completed */
-        String s4 = s3.substring(1);
-        s5 = s4.substring(0, s4.indexOf('='));
-        s6 = s4.substring(1 + s4.indexOf('='));
-        if (s6.charAt(0) != '"') goto _L2; else goto _L1
-_L1:
-        String s7;
-        String s8 = s6.substring(1);
-        int l = s8.indexOf('"');
-        s7 = s8.substring(0, l);
-        s3 = s8.substring(l + 1);
-_L4:
-        if (s5.contentEquals("PROGRAM-ID"))
-        {
-            i = Integer.parseInt(s7);
-            continue; /* Loop/switch isn't completed */
-        }
-        break MISSING_BLOCK_LABEL_187;
-_L2:
-        int k;
-        try
-        {
-            k = s6.indexOf(',');
-        }
-        catch (NumberFormatException numberformatexception)
-        {
+                if (name.contentEquals(PROGRAM_ID)) {
+                    programId = Integer.parseInt(value);
+                } else if (name.contentEquals(CODECS)) {
+                    codec = value;
+                } else if (name.contentEquals(BANDWIDTH)) {
+                    bandWidth = Integer.parseInt(value);
+                } else if (name.contentEquals(RESOLUTION)) {
+                    resolution = value;
+                } else {
+                    log.fine("Unhandled STREAM-INF attribute " + name + " " + value);
+                }
+            }
+        } catch (NumberFormatException e) {
+            return false;
+        } catch (IndexOutOfBoundsException e) {
             return false;
         }
-        catch (IndexOutOfBoundsException indexoutofboundsexception)
-        {
-            return false;
-        }
-        if (k == -1)
-            break MISSING_BLOCK_LABEL_177;
-        s7 = s6.substring(0, k);
-        s3 = s6.substring(k);
-        if (true) goto _L4; else goto _L3
-_L3:
-        k = s6.length();
-        break MISSING_BLOCK_LABEL_155;
-        if (s5.contentEquals("CODECS"))
-        {
-            s2 = s7;
-            continue; /* Loop/switch isn't completed */
-        }
-        if (s5.contentEquals("BANDWIDTH"))
-        {
-            j = Integer.parseInt(s7);
-            continue; /* Loop/switch isn't completed */
-        }
-        if (s5.contentEquals("NAME"))
-        {
-            s1 = s7;
-            continue; /* Loop/switch isn't completed */
-        }
-        log.fine((new StringBuilder()).append("Unhandled STREAM-INF attribute ").append(s5).append(" ").append(s7).toString());
-        if (true) goto _L6; else goto _L5
-_L5:
-        elementbuilder.playList(i, j, s2, s1);
+
+        builder.playList(programId, bandWidth, codec, resolution);
+
         return true;
     }
 
-    private long parseProgramDateTime(String s, int i)
-        throws ParseException
-    {
-        return M3uConstants.Patterns.toDate(s, i);
-    }
 
-    private int parseTargetDuration(String s, int i)
-        throws ParseException
-    {
-        return (int)parseNumberTag(s, i, M3uConstants.Patterns.EXT_X_TARGET_DURATION, "#EXT-X-TARGETDURATION");
-    }
-
-    private URI toURI(String s)
-    {
-        URI uri;
-        try
-        {
-            uri = URI.create(s);
+    private URI toURI(String line) {
+        try {
+            return (URI.create(line));
+        } catch (IllegalArgumentException e) {
+            return new File(line).toURI();
         }
-        catch (IllegalArgumentException illegalargumentexception)
-        {
-            return (new File(s)).toURI();
-        }
-        return uri;
     }
 
-    public Playlist parse(Readable readable)
-        throws ParseException
-    {
-        Scanner scanner = new Scanner(readable);
-        boolean flag = true;
-        int i = 0;
-        ArrayList arraylist = new ArrayList(10);
-        ElementBuilder elementbuilder = new ElementBuilder();
-        boolean flag1 = false;
-        int j = -1;
-        int k = -1;
-        EncryptionInfo encryptioninfo = null;
-        for (; scanner.hasNextLine(); i++)
-        {
-            String s = scanner.nextLine().trim();
-            if (s.length() <= 0)
-                continue;
-            if (s.startsWith("#EXT"))
-            {
-                if (flag)
-                {
-                    checkFirstLine(i, s);
-                    flag = false;
-                    continue;
-                }
-                if (s.startsWith("#EXTINF"))
-                {
-                    parseExtInf(s, i, elementbuilder);
-                    continue;
-                }
-                if (s.startsWith("#EXT-X-ENDLIST"))
-                {
-                    flag1 = true;
-                    continue;
-                }
-                if (s.startsWith("#EXT-X-TARGETDURATION"))
-                {
-                    if (j != -1)
-                        throw new ParseException(s, i, "#EXT-X-TARGETDURATION duplicated");
-                    j = parseTargetDuration(s, i);
-                    continue;
-                }
-                if (s.startsWith("#EXT-X-MEDIA-SEQUENCE"))
-                {
-                    if (k != -1)
-                        throw new ParseException(s, i, "#EXT-X-MEDIA-SEQUENCE duplicated");
-                    k = parseMediaSequence(s, i);
-                    continue;
-                }
-                if (s.startsWith("#EXT-X-PROGRAM-DATE-TIME"))
-                {
-                    elementbuilder.programDate(parseProgramDateTime(s, i));
-                    continue;
-                }
-                if (s.startsWith("#EXT-X-STREAM-INF"))
-                {
-                    if (!parsePlayListInfo(elementbuilder, s))
-                        throw new ParseException(s, i, "Failed to parse EXT-X-STREAM-INF element");
-                    continue;
-                }
-                if (s.startsWith("#EXT-X-KEY"))
-                    encryptioninfo = parseEncryption(s, i);
-                else
-                    log.log(Level.FINE, (new StringBuilder()).append("Unknown: '").append(s).append("'").toString());
-                continue;
-            }
-            if (s.startsWith("#"))
-            {
-                if (log.isLoggable(Level.FINEST))
-                    log.log(Level.FINEST, (new StringBuilder()).append("----- Comment: ").append(s).toString());
-                continue;
-            }
-            if (flag)
-                checkFirstLine(i, s);
-            elementbuilder.encrypted(encryptioninfo);
-            elementbuilder.uri(toURI(s));
-            arraylist.add(elementbuilder.create());
-            elementbuilder.reset();
+    private long parseProgramDateTime(String line, int lineNumber) throws ParseException {
+        return Patterns.toDate(line, lineNumber);
+    }
+
+    private int parseTargetDuration(String line, int lineNumber) throws ParseException {
+        return (int) parseNumberTag(line, lineNumber, Patterns.EXT_X_TARGET_DURATION, EXT_X_TARGET_DURATION);
+    }
+
+    private int parseMediaSequence(String line, int lineNumber) throws ParseException {
+        return (int) parseNumberTag(line, lineNumber, Patterns.EXT_X_MEDIA_SEQUENCE, EXT_X_MEDIA_SEQUENCE);
+    }
+
+    private long parseNumberTag(String line, int lineNumber, Pattern patter, String property) throws ParseException {
+        Matcher matcher = patter.matcher(line);
+        if (!matcher.find() && !matcher.matches() && matcher.groupCount() < 1) {
+            throw new ParseException(line, lineNumber, property + " must specify duration");
         }
 
-        return new Playlist(Collections.unmodifiableList(arraylist), flag1, j, k);
+        try {
+            return Long.valueOf(matcher.group(1));
+        } catch (NumberFormatException e) {
+            // should not happen because of
+            throw new ParseException(line, lineNumber, e);
+        }
     }
+
+    private void checkFirstLine(int lineNumber, String line) throws ParseException {
+        if (type == PlaylistType.M3U8 && !line.startsWith(EXTM3U)) {
+            throw new ParseException(line, lineNumber, "Playlist type '" + PlaylistType.M3U8 + "' must start with " + EXTM3U);
+        }
+    }
+
+    private void parseExtInf(String line, int lineNumber, ElementBuilder builder) throws ParseException {
+        // EXTINF:200,Title
+        final Matcher matcher = Patterns.EXTINF.matcher(line);
+
+
+        if (!matcher.find() && !matcher.matches() && matcher.groupCount() < 1) {
+            throw new ParseException(line, lineNumber, "EXTINF must specify at least the duration");
+        }
+
+        String duration = matcher.group(1);
+        String title = matcher.groupCount() > 1 ? matcher.group(2) : "";
+
+        try {
+            builder.duration(Integer.valueOf(duration)).title(title);
+        } catch (NumberFormatException e) {
+            // should not happen because of
+            throw new ParseException(line, lineNumber, e);
+        }
+    }
+
+    private EncryptionInfo parseEncryption(String line, int lineNumber) throws ParseException {
+        Matcher matcher = Patterns.EXT_X_KEY.matcher(line);
+
+        if (!matcher.find() || !matcher.matches() || matcher.groupCount() < 1) {
+            throw new ParseException(line, lineNumber, "illegal input: " + line);
+        }
+
+        String method = matcher.group(1);
+        String uri = matcher.group(3);
+
+        if (method.equalsIgnoreCase("none")) {
+            return null;
+        }
+
+        return new ElementImpl.EncryptionInfoImpl(uri != null ? toURI(uri) : null, method);
+    }
+
 }

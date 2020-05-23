@@ -75,6 +75,7 @@ final class M3uConstants
     static final String EX_PREFIX = "#EXT";
     static final String NAME = "NAME";
     static final String PROGRAM_ID = "PROGRAM-ID";
+    final static String RESOLUTION = "RESOLUTION";
 
     private M3uConstants()
     {

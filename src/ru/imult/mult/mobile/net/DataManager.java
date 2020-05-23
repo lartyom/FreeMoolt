@@ -14,8 +14,6 @@ import ru.imult.mult.mobile.m3u8.PlaylistParser;
 
 public class DataManager {
 	 private static DataManager instance;
-	private static final String HEADER_AUTHORIZATION = "Authorization";
-    private static final String GET = "GET";
     public static DataManager getInstance()
     {
         if (instance == null)
