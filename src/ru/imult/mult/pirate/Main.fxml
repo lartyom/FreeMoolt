@@ -19,12 +19,14 @@
         <MenuBar>
         <Menu text="File">
          <MenuItem text="Show news" onAction="#showNews"></MenuItem>
+         <MenuItem text="Settings" onAction="#settings"></MenuItem>
         <MenuItem text="Exit" onAction="#exit"></MenuItem>
         </Menu>
         <Menu text="About">
         <MenuItem text="This cartoon" onAction="#cartoonInfo"></MenuItem>
         <MenuItem text="This program" onAction="#aboutInfo"></MenuItem>
         <MenuItem text="Download trailer" onAction="#downloadTrailer"></MenuItem>
+        <MenuItem text="Sort" onAction="#sort"></MenuItem>
         </Menu>
 
 

@@ -13,6 +13,7 @@ public interface PlaylistInfo
     public abstract String getCodecs();
 
     public abstract String getName();
+    public abstract String getResolution();
 
     public abstract int getProgramId();
 }

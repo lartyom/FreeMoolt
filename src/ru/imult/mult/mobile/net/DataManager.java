@@ -2,6 +2,7 @@ package ru.imult.mult.mobile.net;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -38,6 +39,16 @@ public class DataManager {
 		    jsonobject = (new JsonParser()).parse(response).getAsJsonObject();
 		    return jsonobject;
 	    }
+	 @SuppressWarnings("deprecation")
+	public JsonObject getJsonFromFile(final String path) throws IOException
+	    {
+		 FileInputStream in = new FileInputStream(path);
+		 String response = convertStreamToString(in);
+		    JsonObject jsonobject;
+		    jsonobject = (new JsonParser()).parse(response).getAsJsonObject();
+		    return jsonobject;
+	    }
+	 
 	 public Playlist getM3U8FromUrlSync(final String url) throws IOException, ParseException
 	    {
 	        URL r_url = new URL(url);

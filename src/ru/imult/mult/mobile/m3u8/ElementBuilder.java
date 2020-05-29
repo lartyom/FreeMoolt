@@ -62,9 +62,9 @@ class ElementBuilder
         return uri;
     }
 
-    public ElementBuilder playList(int i, int j, String s, String s1)
+    public ElementBuilder playList(int i, int j, String s, String s1, String s2)
     {
-        playlistInfo = new ElementImpl.PlaylistInfoImpl(i, j, s, s1);
+        playlistInfo = new ElementImpl.PlaylistInfoImpl(i, j, s, s1,s2);
         return this;
     }
 

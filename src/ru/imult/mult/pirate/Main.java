@@ -36,8 +36,13 @@ import ru.imult.mult.mobile.m3u8.M3u8Parser;
 import ru.imult.mult.mobile.m3u8.ParseException;
 import ru.imult.mult.mobile.m3u8.Playlist;
 public class Main extends Application{
-	static boolean flag = true;
+	//static boolean flag = true;
 	static String[] cartoon_info = new String[3];
+	static String[] order = {"episode_number","asc"};;
+	static Boolean autorun = false;
+	static String ffmpegpath = "ffmpeg-4.2.2-win64-static";
+	static String video_quality = "480p";
+	static String video_server = "b1.mult.digitala.ru";
 	//static String _args;
 	public static void downloadVideo(String playlist_url, String ffmpegpath, String videoname) throws IOException, InterruptedException, ParseException{
 		M3u8Parser.createPlaylist(DataManager.getInstance().getM3U8FromUrlSync(playlist_url),ffmpegpath);
@@ -52,18 +57,39 @@ public class Main extends Application{
 			    stdin.println("cd "+ffmpegpath);
 			    stdin.println("ffmpeg -y -f concat -i stream.txt -c copy "+videoname);
 			    // write any other commands you want here
+			    if(autorun==true){
+			    stdin.println("         start "+videoname);
+			    }
 			    stdin.close();
 			    int returnCode = p.waitFor();
 			    System.out.println("Return code = " + returnCode);
 			    deleteFiles(ffmpegpath, "stream.txt");
+
+	}
+	public static void downloadVideo(String playlist_url) throws InterruptedException, IOException {
+		 String[] command =
+			    {
+			        "cmd",
+			    };
+			    Process p = Runtime.getRuntime().exec(command);
+			    new Thread(new SyncPipe(p.getErrorStream(), System.err)).start();
+			    new Thread(new SyncPipe(p.getInputStream(), System.out)).start();
+			    PrintWriter stdin = new PrintWriter(p.getOutputStream());
+			    //stdin.println("cd "+ffmpegpath);
+			    stdin.println("youtube-dl "+playlist_url);
+			    // write any other commands you want here
+			    /*if(autorun==true){
+			    stdin.println("         start "+videoname);
+			    }*/
+			    stdin.close();
+			    int returnCode = p.waitFor();
+			    System.out.println("Return code = " + returnCode);
+
 	}
 	static void deleteFiles(String files_path, String files_list) throws IOException{
 		System.out.println("Removing segments...");
-        //СЃРѕР·РґР°РµРј РѕР±СЉРµРєС‚ FileReader РґР»СЏ РѕР±СЉРµРєС‚Р° File
         FileReader fr = new FileReader( new File(files_path+"\\"+files_list/*"ffmpeg-4.2.2-win64-static\\bin\\stream.txt"*/));
-        //СЃРѕР·РґР°РµРј BufferedReader СЃ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµРіРѕ FileReader РґР»СЏ РїРѕСЃС‚СЂРѕС‡РЅРѕРіРѕ СЃС‡РёС‚С‹РІР°РЅРёСЏ
         BufferedReader reader = new BufferedReader(fr);
-        // СЃС‡РёС‚Р°РµРј СЃРЅР°С‡Р°Р»Р° РїРµСЂРІСѓСЋ СЃС‚СЂРѕРєСѓ
         String line;
         int counter = 0;
         while ((line=reader.readLine()) != null) {
@@ -74,8 +100,8 @@ public class Main extends Application{
 
 	 public static void main(String[] args) throws IOException, ParseException, InterruptedException  {
 		 Application.launch(args);
-		
-		 
+
+
 	    /* System.out.println(new Date(mainModel.getInfo().getServerTime()*1000).toString());
 	     System.out.println(mainModel.getInfo().getSelf());
 		 System.out.println(mainModel.getStatus());*/
@@ -109,8 +135,8 @@ public class Main extends Application{
 						 }
 					 }
 					 break;
-			 }			 
-			 
+			 }
+
 			break;
 		case "exit":
 			flag = false;
@@ -122,25 +148,25 @@ public class Main extends Application{
 		}
 		 }*/
 		  //Utils.beautifyJson(jsonobject);
-		  
+
      //System.out.printf("Episode update %s: %s", aobj);
-	     
-   
-       	
+
+
+
 		 //M3u8Parser.createPlaylist(new PlaylistParser(ru.imult.mult.mobile.m3u8.PlaylistType.M3U8).parse( new FileReader(new File(args[0]/*"C:\\Users\\Admin\\Downloads\\21428.480p.m3u8"*/))),args[1]);
-		
+
 	 }
 
 @Override
 public void start(Stage stage) throws Exception {
-    Parent root = FXMLLoader.load(getClass().getResource("Main.fxml")); 
+    Parent root = FXMLLoader.load(getClass().getResource("Main.fxml"));
     Scene scene = new Scene(root);
-     
+
     String s = "https://mult.digitala.ru/api/v1/main_page";
 	 JsonObject jsonobject = DataManager.getInstance().getJsonFromUrlSync(s);
 	 //System.out.println(jsonobject);
 	 MainModel mainModel = new Gson().fromJson(jsonobject, MainModel.class);
-	 System.out.println("FreeMoolt v.0.5 Copyleft (ɔ) 2020 norecord");
+	 System.out.println("FreeMoolt v.1.2 Copyleft (ɔ) 2020 norecord");
 	 System.out.println("Type \"download\" <type> <id> for download video.");
 	 System.out.println("-------------------------------------------");
 	 System.out.println(mainModel.getData().getBanner().getTitle());
@@ -150,7 +176,7 @@ public void start(Stage stage) throws Exception {
 	FlowPane movies = (FlowPane) root.getChildrenUnmodifiable().get(3);
 	Label movies_name = (Label) root.getChildrenUnmodifiable().get(2);
 	 //System.out.println(mainModel.getData());
-	
+
 	 //System.out.println(mainModel.getData().getBanner().getTitle());
 	 banner.setImage(new Image(mainModel.getData().getBanner().getImageURL()));
 	 //System.out.println(new Date(mainModel.getData().getBanner().getFromdate()*1000).toString());
@@ -165,11 +191,11 @@ public void start(Stage stage) throws Exception {
 		 movie_image.setPreserveRatio(true);
 		 Button movie_name = new Button(i.getTitle());
          movie_name.setOnAction(new EventHandler<ActionEvent>() {
-             
+
              @Override
              public void handle(ActionEvent event) {
-              
-                 banner.setImage(new Image(i.getBannerURL())); 
+
+                 banner.setImage(new Image(i.getBannerURL()));
                  cartoon_info[0] = i.getDescription();
                  cartoon_info[1] = i.getTitle();
                  cartoon_info[2] = i.getTrailerURL();
@@ -177,41 +203,56 @@ public void start(Stage stage) throws Exception {
                  movies.getChildren().clear();
                  EpisodeMainModel episode_mainModel;
 				try {
-					episode_mainModel = new Gson().fromJson(DataManager.getInstance().getJsonFromUrlSync("https://mult.digitala.ru/api/v1/materials?type=episode&order_by=episode_number&order_direction=asc&movie_id="+i.getId()), EpisodeMainModel.class);
-					 for(EpisodeData i : episode_mainModel.getData()){
-	            		 
+					if(video_server=="b1.mult.digitala.ru"){
+					episode_mainModel = new Gson().fromJson(DataManager.getInstance().getJsonFromUrlSync("https://mult.digitala.ru/api/v1/materials?type=episode&order_by="+order[0]+"&order_direction="+order[1]+"&movie_id="+i.getId()), EpisodeMainModel.class);
+					}else{
+					episode_mainModel = new Gson().fromJson(DataManager.getInstance().getJsonFromFile("materials.json"), EpisodeMainModel.class);
+					}
+					for(EpisodeData i : episode_mainModel.getData()){
+
 	            		 ImageView movie_image = new ImageView(new Image(i.getThumbnailURL()));
 	            		 movie_image.setFitHeight(150);
 	            		 movie_image.setFitWidth(100);
 	            		 movie_image.setPreserveRatio(true);
 	            		 Button movie_name = new Button(i.getTitle());
 	            		   movie_name.setOnAction(new EventHandler<ActionEvent>() {
-	            	             
+
 	            	             @Override
 	            	             public void handle(ActionEvent event) {
+	            	            	 if(video_server=="b1.mult.digitala.ru"){
 	            	            	 try {
-										M3u8Parser.createPlaylistOfPlaylist(DataManager.getInstance().getM3U8FromUrlSync(i.getFileURL()), "ffmpeg-4.2.2-win64-static\\bin");
+										M3u8Parser.createPlaylistOfPlaylist(DataManager.getInstance().getM3U8FromUrlSync(i.getFileURL()), ffmpegpath+"\\bin",video_quality);
 									} catch (IOException | ParseException | InterruptedException e) {
 										// TODO Auto-generated catch block
 										e.printStackTrace();
+									}}else{
+	            	            	 try {
+										downloadVideo(i.getFileURL());
+									} catch (InterruptedException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									} catch (IOException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
 									}
-	            	                
+									}
+
 	            	             }
-	            	         });	                         					              
+	            	         });
 	            		 movie_name.setPrefWidth(100);
 	            		 VBox movie = new VBox(movie_image,movie_name);
 	            		 movies.getChildren().add(movie);
 	             }
-					 
+
 				} catch (JsonSyntaxException | IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-                
+
          }
              });
 		 movie_name.setPrefWidth(100);
-		 
+
 		 VBox movie = new VBox(movie_image,movie_name);
 		 movies.getChildren().add(movie);
 		 System.out.println(i.getTitle());
@@ -225,7 +266,7 @@ public void start(Stage stage) throws Exception {
 		 if(i.getMadeInRussia() != 0){
 		 	System.out.println("Made in Russia");
 		 }
-		 System.out.println("---------------------------------------"); 
+		 System.out.println("---------------------------------------");
 	 }
 	 break;
 	 case "new_movies":
@@ -239,17 +280,49 @@ public void start(Stage stage) throws Exception {
 		 Button movie_name = new Button(i.getTitle());
 		 movie_name.setPrefWidth(100);
          movie_name.setOnAction(new EventHandler<ActionEvent>() {
-             
+
              @Override
              public void handle(ActionEvent event) {
-              
-                 banner.setImage(new Image(i.getBannerURL())); 
+
+                 banner.setImage(new Image(i.getBannerURL()));
                  cartoon_info[0] = i.getDescription();
                  cartoon_info[1] = i.getTitle();
                  cartoon_info[2] = i.getTrailerURL();
                  movies.getChildren().clear();
-             }
-         });
+                 EpisodeMainModel episode_mainModel;
+ 				try {
+ 					episode_mainModel = new Gson().fromJson(DataManager.getInstance().getJsonFromUrlSync("https://mult.digitala.ru/api/v1/materials?type=episode&order_by="+order[0]+"&order_direction="+order[1]+"&movie_id="+i.getId()), EpisodeMainModel.class);
+ 					 for(EpisodeData i : episode_mainModel.getData()){
+
+ 	            		 ImageView movie_image = new ImageView(new Image(i.getThumbnailURL()));
+ 	            		 movie_image.setFitHeight(150);
+ 	            		 movie_image.setFitWidth(100);
+ 	            		 movie_image.setPreserveRatio(true);
+ 	            		 Button movie_name = new Button(i.getTitle());
+ 	            		   movie_name.setOnAction(new EventHandler<ActionEvent>() {
+
+ 	            	             @Override
+ 	            	             public void handle(ActionEvent event) {
+ 	            	            	 try {
+ 	            	            		M3u8Parser.createPlaylistOfPlaylist(DataManager.getInstance().getM3U8FromUrlSync(i.getFileURL()), ffmpegpath+"\\bin",video_quality);
+ 									} catch (IOException | ParseException | InterruptedException e) {
+ 										// TODO Auto-generated catch block
+ 										e.printStackTrace();
+ 									}
+
+ 	            	             }
+ 	            	         });
+ 	            		 movie_name.setPrefWidth(100);
+ 	            		 VBox movie = new VBox(movie_image,movie_name);
+ 	            		 movies.getChildren().add(movie);
+ 	             }
+
+ 				} catch (JsonSyntaxException | IOException e) {
+ 					// TODO Auto-generated catch block
+ 					e.printStackTrace();
+ 				}}
+           }
+         );
 		 VBox movie = new VBox(movie_image,movie_name);
 		 movies.getChildren().add(movie);
 		 System.out.println(i.getTitle());
@@ -263,7 +336,7 @@ public void start(Stage stage) throws Exception {
 		 if(i.getMadeInRussia() != 0){
 			 System.out.println("Made in Russia");
 		 }
-		 System.out.println("---------------------------------------"); 
+		 System.out.println("---------------------------------------");
 	 }
 	 break;
 	 case "foreign_movies":
@@ -277,16 +350,48 @@ public void start(Stage stage) throws Exception {
 		 Button movie_name = new Button(i.getTitle());
 		 movie_name.setPrefWidth(100);
  movie_name.setOnAction(new EventHandler<ActionEvent>() {
-             
+
              @Override
              public void handle(ActionEvent event) {
-              
-                 banner.setImage(new Image(i.getBannerURL())); 
+
+                 banner.setImage(new Image(i.getBannerURL()));
                  cartoon_info[0] = i.getDescription();
                  cartoon_info[1] = i.getTitle();
                  cartoon_info[2] = i.getTrailerURL();
                  movies.getChildren().clear();
-                 
+                 EpisodeMainModel episode_mainModel;
+ 				try {
+ 					episode_mainModel = new Gson().fromJson(DataManager.getInstance().getJsonFromUrlSync("https://mult.digitala.ru/api/v1/materials?type=episode&order_by="+order[0]+"&order_direction="+order[1]+"&movie_id="+i.getId()), EpisodeMainModel.class);
+ 					 for(EpisodeData i : episode_mainModel.getData()){
+
+ 	            		 ImageView movie_image = new ImageView(new Image(i.getThumbnailURL()));
+ 	            		 movie_image.setFitHeight(150);
+ 	            		 movie_image.setFitWidth(100);
+ 	            		 movie_image.setPreserveRatio(true);
+ 	            		 Button movie_name = new Button(i.getTitle());
+ 	            		   movie_name.setOnAction(new EventHandler<ActionEvent>() {
+
+ 	            	             @Override
+ 	            	             public void handle(ActionEvent event) {
+ 	            	            	 try {
+ 	            	            		M3u8Parser.createPlaylistOfPlaylist(DataManager.getInstance().getM3U8FromUrlSync(i.getFileURL()), ffmpegpath+"\\bin",video_quality);
+ 									} catch (IOException | ParseException | InterruptedException e) {
+ 										// TODO Auto-generated catch block
+ 										e.printStackTrace();
+ 									}
+
+ 	            	             }
+ 	            	         });
+ 	            		 movie_name.setPrefWidth(100);
+ 	            		 VBox movie = new VBox(movie_image,movie_name);
+ 	            		 movies.getChildren().add(movie);
+ 	             }
+
+ 				} catch (JsonSyntaxException | IOException e) {
+ 					// TODO Auto-generated catch block
+ 					e.printStackTrace();
+ 				}
+
              }
          });
 		 VBox movie = new VBox(movie_image,movie_name);
@@ -302,23 +407,23 @@ public void start(Stage stage) throws Exception {
 		 if(i.getMadeInRussia() != 0){
 			 System.out.println("Made in Russia");
 		 }
-		 System.out.println("----------------------------------------"); 
+		 System.out.println("----------------------------------------");
 	 }
 	 break;
 	 }
 	   System.out.println(new Date(mainModel.getInfo().getServerTime()*1000).toString());
 	     System.out.println(mainModel.getInfo().getSelf());
 		 System.out.println(mainModel.getStatus());
-    
+
     stage.setScene(scene);
     stage.setResizable(false);
     stage.setTitle("FreeMoolt");
     stage.setWidth(700);
     stage.setHeight(850);
-     
+
     stage.show();
 }
 }
 
-	 
+
 

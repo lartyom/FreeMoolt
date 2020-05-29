@@ -33,24 +33,24 @@ public class M3u8Parser {
 	                //System.out.println(line);
 	                // считываем остальные строки в цикле
 	                //line = reader.readLine();
-	            
+
 	                String[] user_input = String.valueOf((char)c).split(":");
 	                switch(user_input[0]){
 	                case "#EXTINF":
 	                	reader.
 	                	break;
-	                }   
+	                }
 	                if(line.contains("video")){
 	                	 counter++;
 	                	URL url = new URL("https://b1.mult.digitala.ru/c/"+line);
 	                	ReadableByteChannel readableByteChannel = Channels.newChannel(url.openStream());
-	                	 FileOutputStream fos = new FileOutputStream("output_"+String.valueOf(counter)+".ts");         
+	                	 FileOutputStream fos = new FileOutputStream("output_"+String.valueOf(counter)+".ts");
 	                	 fos.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
 	                	 fos.close();
 	                	 readableByteChannel.close();
 	                }
 	            }
-	           
+
 	        } catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -68,12 +68,12 @@ public class M3u8Parser {
 	     String s;
 	     try(PrintStream printStream = new PrintStream(ffmpegpath+"\\stream.txt"))
 	        {
-	    for(int i =0;i<playlist.getElements().size();i++){    	
-	    
+	    for(int i =0;i<playlist.getElements().size();i++){
+
 	    	 s = (new StringBuilder()).append("https://b1.mult.digitala.ru/c/").append(((Element)playlist.getElements().get(i)).getURI().toString()).toString();
 	    	 System.out.println("Downloading "+s+" file...");
 	    	 ReadableByteChannel readableByteChannel = Channels.newChannel(new URL(s).openStream());
-        	 FileOutputStream fos = new FileOutputStream(ffmpegpath+"\\output_"+String.valueOf(i)+".ts");        
+        	 FileOutputStream fos = new FileOutputStream(ffmpegpath+"\\output_"+String.valueOf(i)+".ts");
         	 fos.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
         	 fos.close();
         	 readableByteChannel.close();
@@ -83,9 +83,9 @@ public class M3u8Parser {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-	     
+
 	    }
-	 public static void createPlaylistOfPlaylist(Playlist playlist, String ffmpegpath/*, OnParsedListener onparsedlistener*/) throws MalformedURLException, IOException, ParseException, InterruptedException
+	 public static void createPlaylistOfPlaylist(Playlist playlist, String ffmpegpath,String quality) throws MalformedURLException, IOException, ParseException, InterruptedException
 	    {
 		 QualityPlaylist qualityplaylist = new QualityPlaylist();
 	     qualityplaylist.setMaster(playlist);
@@ -94,15 +94,17 @@ public class M3u8Parser {
 	     String s;
 	     try(PrintStream printStream = new PrintStream(ffmpegpath+"\\stream.txt"))
 	        {
-	    for(int i =0;i<playlist.getElements().size();i++){    	
-	    
+	    for(int i=0;i<playlist.getElements().size();i++){
+	    	 
+	    	if(quality.equals(((Element)playlist.getElements().get(i)).getPlayListInfo().getName())){
 	    	 s = (new StringBuilder()).append("https://b1.mult.digitala.ru/c/").append(((Element)playlist.getElements().get(i)).getURI().toString()).toString();
 	    	 System.out.println("Downloading "+s+" file...");
-	    	 //((Element)playlist.getElements().get(i)).getPlayListInfo().getCodecs()
-	    	Main.downloadVideo(s,ffmpegpath,"all_"+i+".mp4");
-	     
+	    	 Main.downloadVideo(s,ffmpegpath,"all.mp4");
+	    	}
+	    	 }
+
 	    }
 	        }
 	    }
-}
+
 

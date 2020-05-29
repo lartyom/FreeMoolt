@@ -1,6 +1,6 @@
 // Decompiled by Jad v1.5.8g. Copyright 2001 Pavel Kouznetsov.
 // Jad home page: http://www.kpdus.com/jad.html
-// Decompiler options: packimports(3) fieldsfirst noctor space 
+// Decompiler options: packimports(3) fieldsfirst noctor space
 
 package ru.imult.mult.mobile.m3u8;
 
@@ -47,6 +47,7 @@ final class ElementImpl
 
         private final int bandWidth;
         private final String codec;
+        private final String resolution;
         private final String name;
         private final int programId;
 
@@ -58,6 +59,10 @@ final class ElementImpl
         public String getCodecs()
         {
             return codec;
+        }
+        public String getResolution()
+        {
+            return resolution;
         }
 
         public String getName()
@@ -75,12 +80,14 @@ final class ElementImpl
             return (new StringBuilder()).append("PlaylistInfoImpl{programId=").append(programId).append(", bandWidth=").append(bandWidth).append(", codec='").append(codec).append('\'').append(", name='").append(name).append('\'').append('}').toString();
         }
 
-        public PlaylistInfoImpl(int i, int j, String s, String s1)
+        public PlaylistInfoImpl(int i, int j, String s, String s1, String s2)
         {
             programId = i;
             bandWidth = j;
-            codec = s;
-            name = s1;
+            name = s;
+            codec = s1;
+            resolution = s2;
+            
         }
     }
 

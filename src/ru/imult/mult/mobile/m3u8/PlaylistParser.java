@@ -126,6 +126,7 @@ public final class PlaylistParser {
         int bandWidth = -1;
         String codec = "";
 	String resolution = null;
+	String name = "";
         String attributesList = line.substring(line.indexOf(":"));
 
         // Iterate through the attributes string, chopping it down until we have all the values
@@ -133,7 +134,7 @@ public final class PlaylistParser {
             while (attributesList.length() > 0) {
                 // Skip the initial : or the last delimiting comma
                 attributesList = attributesList.substring(1);
-                String name = attributesList.substring(0, attributesList.indexOf('='));
+                String name1 = attributesList.substring(0, attributesList.indexOf('='));
                 int indexOfEquals = attributesList.indexOf('=');
                 attributesList = attributesList.substring(indexOfEquals + 1);
                 String value;
@@ -154,16 +155,18 @@ public final class PlaylistParser {
 
                 // Check to see whether our kvp is important to us
 
-                if (name.contentEquals(PROGRAM_ID)) {
+                if (name1.contentEquals(PROGRAM_ID)) {
                     programId = Integer.parseInt(value);
-                } else if (name.contentEquals(CODECS)) {
+                } else if (name1.contentEquals(CODECS)) {
                     codec = value;
-                } else if (name.contentEquals(BANDWIDTH)) {
+                } else if (name1.contentEquals(BANDWIDTH)) {
                     bandWidth = Integer.parseInt(value);
-                } else if (name.contentEquals(RESOLUTION)) {
+                } else if (name1.contentEquals(RESOLUTION)) {
                     resolution = value;
+                } else if (name1.contentEquals(NAME)) {
+                    name = value;
                 } else {
-                    log.fine("Unhandled STREAM-INF attribute " + name + " " + value);
+                    log.fine("Unhandled STREAM-INF attribute " + name1 + " " + value);
                 }
             }
         } catch (NumberFormatException e) {
@@ -172,7 +175,7 @@ public final class PlaylistParser {
             return false;
         }
 
-        builder.playList(programId, bandWidth, codec, resolution);
+        builder.playList(programId, bandWidth, name, codec, resolution);
 
         return true;
     }
