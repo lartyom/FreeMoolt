@@ -3,7 +3,10 @@
 * Run it using command-line arguments: 
   * `path to .m3u8 playlist`
   * ~~`path to ffmpeg library`~~
+ OpenJDK 11 no longer support JavaFX, so install OpenJFX and run the program with parameters:
+ `--module-path /usr/share/openjfx/lib --add-modules javafx.controls,javafx.fxml`
 * After download video files will be located in folder where located ffmpeg.
+
 ## Links for download
 * Mult bank (needed for download videos from playlist): https://b1.mult.digitala.ru/c/
 * `https://mult.digitala.ru/api/v1/materials?type=episode&order_by=&order_direction=&movie_id=7`
